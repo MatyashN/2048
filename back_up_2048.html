@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>2048</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+	<style>
+		body {
+			position: fixed;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+			font-size: 0px;
+			background: #434343;
+		}
+			#game-container {
+				position: absolute;
+    			left: 0;
+   				right: 0;
+    			top: 0;
+    			bottom: 0;
+    			margin: auto;
+    			padding: 5px;
+    			background: #61B6C2;
+    			/*border-radius: 10px;*/
+    		}
+	    		.score {
+				    position: absolute;
+				    width: 100%;
+				    height: 35px;
+				    font-size: 30px;
+				    top: -50px;
+				    left: 0px;
+				    /*border-radius: 5px;*/
+				    line-height: 35px;
+				    text-align: center;
+				    background: #D8E5E5;
+				    color: #023E46;
+				}
+    			.grid-cell{
+    				display: inline-block;
+    				width: 75px;
+    				height: 75px;
+    				margin: 5px;
+    				background: #D8E5E5;
+    				/*border-radius: 5px;*/
+    				box-shadow: 0 5px 10px -10px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+    			}
+				.tile-container {
+				    position: absolute;
+    				top: 0px;
+    				left: 0px;
+    				margin: 5px;
+				}
+					.tile {
+					    position: absolute;
+   						width: 75px;
+   						height: 75px;
+   						margin: 5px;
+   						background: #F8E8F9;
+   						/*border-radius: 5px;*/
+   						font-family: 'Comic Sans MS';
+   						font-size: 26px;
+   						color: #024053;
+   						font-weight: bold;
+   						text-align: center;
+   						display: table;
+   						box-shadow: 0 5px 10px -10px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+					}
+						.tile span {
+						    display: table-cell;
+						    vertical-align: middle;
+						}
+					.tile-2,.tile-2N{background: #FFFBA3;}
+					.tile-4,.tile-4N{background: #FFC9C9;}
+					.tile-8{background: #EA95FF;}
+					.tile-16{background: #B9AFFF;}
+					.tile-32{background: #BFEEFF;}
+					.tile-64{background: #9EEFA8;}
+					.tile-128{background: #F5C29D;}
+					.tile-256{background: rgba(255, 62, 62, 0.75);}
+					.tile-512{background: rgba(255, 240, 62, 0.75);}
+					.tile-1024{background: rgba(70, 255, 77, 0.75);}
+					.tile-2048{background: rgba(76, 131, 255, 0.9);}
+					.tile-4096{background: #FF81C7;}
+					.tile-8192{background: #C870FF;}
+					.tile-16384{font-size: 20px; background: #09B7EB;}
+					.tile-32768{font-size: 20px; background: #EB09DA;}
+					.tile-65536{font-size: 20px; background: #EBD909;}
+
+					.tile-2N, .tile-4N{animation-name: flash;
+					    animation-iteration-count: 1;
+					    animation-duration: 0.35s;}
+
+		@keyframes flash{
+			from {opacity:0;}
+  			to {opacity:1;}
+
+			from {width:95px;}
+  			to {width:75px;}
+
+  			from {height:95px;}
+  			to {height:75px;}
+
+  			from {left:-10px;}
+  			to {left:0px;}
+
+  			from {top:-10px;}
+  			to {top:0px;}
+
+		}
+
+
+	</style>
+</head>
+<body>
+	<div id="game-container"></div>
+	<script>
+/*############################---START Constructor GAME2048---############################*/
+		function Game2048(){
+			var self = this; // контекст
+			self.height = 0; // высота(клеточек)
+			self.width = 0;  // ширина(клеточек)
+			self.maxCount = 1;  // количество добавляемых плиток
+			var MAX_COUNT = 2;
+			var VALUE_VAL_END = 1;  // константа для проверки конца игры
+			var tileFalse = 16; // количество нулевых плиток
+			var tileTrue = 0; // количество заполненых плиток
+			var arrTileFalse = []; // массив с координатами пустых ячеек
+			var prevCopyMatrix = []; // сохранённая матрица, до хода
+			var score = 0;
+
+		/*МЕТОД создаём игровую разметку*/
+			self.creategame = function(){
+				$('#game-container > *').remove();
+				$('<div>',{'class':'grid-container'}).appendTo('#game-container');
+				for (var y = 1; y < self.height + 1; y++){
+					var gridRow = $('<div>',{'class':'grid-row row' + y});
+					$(gridRow).appendTo(".grid-container");
+					for(var x = 1; x < self.width + 1; x++){
+						var gridCell = $('<div>', {'class':'grid-cell cell-' + x + '-' + y});
+						$(gridCell).appendTo(gridRow);
+					};
+				};
+				$('#game-container').css('width', function(){var value = $('.grid-cell').outerWidth(true) * self.width;
+					return value;
+				});
+				$('#game-container').css('height', function(){var value = $('.grid-cell').outerHeight(true) * self.height;
+					return value;
+				});
+				// $('head style').append('.grid-row{height:' + $('.grid-cell').outerHeight(true) + 'px}');
+				$('<div>',{'class':'tile-container'}).appendTo('#game-container');
+				$('<div>',{'class':'score'}).appendTo('#game-container');
+
+				createMatrix(self.width, self.height);
+				self.monitorMatrix();
+				tileMatrix[0][0] = 2;
+				tileMatrix[1][0] = 4;
+				tileMatrix[2][0] = 8;
+				tileMatrix[3][0] = 16;
+				tileMatrix[0][1] = 32;
+				tileMatrix[1][1] = 64;
+				tileMatrix[2][1] = 128;
+				tileMatrix[3][1] = 256;
+				tileMatrix[0][2] = 512;
+				tileMatrix[1][2] = 1024;
+				tileMatrix[2][2] = 2048;
+				tileMatrix[3][2] = 4096;
+				tileMatrix[0][3] = 4096 * 2;
+				tileMatrix[1][3] = 4096 * 4;
+				tileMatrix[2][3] = 4096 * 8;
+				tileMatrix[3][3] = 4096 * 16;
+				updateTile(); // наполнения поля плитками
+				self.monitorMatrix();
+			};
+		/*МЕТОД создали игровую разметку*/
+
+        /*START функция генерации матрици навигации*/
+			var tileMatrix = new Array();
+			function createMatrix(columns, rows){
+				for (var x = 0; x < columns; x++){
+					tileMatrix[x] = new Array();
+					for (var y = 0; y < rows; y++){
+						tileMatrix[x][y] = 0;
+					};
+				};
+			};
+        /*END функция генерации матрици навигации*/
+
+		/*START МЕТОД генерации СSS для классов поз*/
+			self.generateCss = function(){
+				var width = $('.grid-cell').outerWidth(true);
+				var height = $('.grid-cell').outerHeight(true);
+				for(var x = 0; x < tileMatrix.length; x++){
+					for(var y = 0; y < tileMatrix[x].length; y++){
+						var cssStr = '.pos-' + (x + 1) + '-' + (y + 1) + '{transform: translate(' + (x * width) + 'px, ' + (y * height) + 'px);}'
+						$('head style').append(cssStr);
+					};
+				};
+			};
+		/*END МЕТОД генерации СSS для классов поз*/
+
+			self.getMatrix = function(){
+				return tileMatrix;
+			};
+
+		/*Strart МЕТОД проверки*/
+			self.monitorMatrix = function(){
+				tileTrue = 0;
+				tileFalse = 0;
+				arrTileFalse = [];
+				for(var x = 0; x < self.width; x++){
+					for(var y = 0; y < self.height; y++){
+						if(tileMatrix[x][y] == 0 || tileMatrix[x][y] == 't'){
+							arrTileFalse.push({X : x, Y : y});
+						};
+						if(tileMatrix[x][y] !== 0 && tileMatrix[x][y] !== 't'){tileTrue += 1};
+					};
+				};
+				tileFalse = arrTileFalse.length;
+			};
+		/*END МЕТОД проверки*/
+
+		/*START функция наполнения поля плитками*/
+			function updateTile(){
+				$('.tile-container > *').remove();
+				function validAndAddTile(){
+				self.monitorMatrix();
+					/*START добавление случайных плиток*/
+					var maxCount;
+					if (tileFalse == self.width * self.height){
+						maxCount = MAX_COUNT
+					} else if (tileFalse < self.maxCount){
+						maxCount = tileFalse
+					} else {maxCount = self.maxCount};
+					for(var count = 0; count < maxCount; ){
+						var number = Math.round(Math.random()*(arrTileFalse.length - 1));
+						if(Math.random() < 0.7){tileMatrix[arrTileFalse[number].X][arrTileFalse[number].Y] = '2N'}
+						else{tileMatrix[arrTileFalse[number].X][arrTileFalse[number].Y] = '4N'}
+						arrTileFalse.splice(number, 1)
+						count++;
+					};
+					/*END добавление случайных плиток*/
+
+					for(var x = 0; x < tileMatrix.length; x++){
+						for(var y = 0; y < tileMatrix[x].length; y++){
+							if (tileMatrix[x][y] && tileMatrix[x][y] !=='t' && tileMatrix[x][y] !=='t+'){
+								var tile = $('<div>',{'class':'tile tile-' + tileMatrix[x][y] + ' pos-' + (x + 1) + '-' + (y + 1)});
+								$('.tile-container').append(tile);
+								$(tile).append('<span>' + parseFloat(tileMatrix[x][y]) + '</span>');
+								tileMatrix[x][y] = parseFloat(tileMatrix[x][y]);
+							} else if (tileMatrix[x][y] == 't' || tileMatrix[x][y] == 't+'){
+								tileMatrix[x][y] = 0;
+							};
+						};
+					};
+					// setTimeout(function(){$('.tile-2N, .tile-4N').css('background','red')},75)
+				};
+				validAndAddTile();
+				$('.score').html('<span>Score: ' + score + '</span>')
+			};
+		/*END функция наполнения поля плитками*/
+
+		/*START функция "заново"*/
+			self.startAfresh = function(){
+				for(var x = 0; x < tileMatrix.length; x++){
+					for(var y = 0; y < tileMatrix[x].length; y++){
+						tileMatrix[x][y] = 0;
+					};
+				};
+				score = 0;
+				self.monitorMatrix();
+				updateTile(); // наполнения поля плитками
+			};
+		/*END функция "заново"*/
+
+
+	/*------------------------------ФУНКЦИИ ДЖИЖЕНИЯ------------------------------*/
+		/*Движение влево*/
+			self.moveLeft = function(){
+				var DATA = 0;
+				for(var y = 0; y < self.height; y++){
+					for(var x = 0; x < self.width; x++){
+						if(!tileMatrix[x][y]) continue;
+							for(var k = x - 1; k >= 0; k--){
+								if(tileMatrix[k][y] !== tileMatrix[x][y] && tileMatrix[k][y] !== 0) break;
+								if(tileMatrix[k][y] == tileMatrix[x][y]){
+									DATA += 1;
+									tileMatrix[k][y] = tileMatrix[k][y] * 2;
+									tileMatrix[x][y] = 't';
+									score += tileMatrix[k][y];
+									break;
+								};
+							};
+							for(var i = 0; i < x; i++){
+								if(tileMatrix[i][y] == 0 || tileMatrix[i][y] == 't'){
+									DATA += 1;
+									tileMatrix[i][y] = tileMatrix[x][y];
+									tileMatrix[x][y] = 0;
+									break;
+								};
+							};
+					};
+				};
+				if(DATA) updateTile();
+			};
+		/*-----*/
+
+		/*Движение вправо*/
+			self.moveRight = function(){
+				var DATA = 0;
+				for(var y = 0; y < self.height; y++){
+					for(var x = (self.width - 1); x >= 0; x--){
+						if(!tileMatrix[x][y]) continue;
+							for(var k = x + 1; k < self.width; k++){
+								if(tileMatrix[k][y] !== tileMatrix[x][y] && tileMatrix[k][y] !== 0) break;
+								if(tileMatrix[k][y] == tileMatrix[x][y]){
+									DATA += 1;
+									tileMatrix[k][y] = tileMatrix[k][y] * 2;
+									tileMatrix[x][y] = 't';
+									score += tileMatrix[k][y];
+									break;
+								};
+							};
+							for(var i = (self.width - 1); i > x; i--){
+								if(tileMatrix[i][y] == 0 || tileMatrix[i][y] == 't'){
+									DATA += 1;
+									tileMatrix[i][y] = tileMatrix[x][y];
+									tileMatrix[x][y] = 0;
+									break;
+								};
+							};
+					};
+				};
+				if(DATA) updateTile();
+			};
+		/*-----*/
+
+		/*Движение вниз*/
+			self.moveDown = function(){
+				var DATA = 0;
+				for(var x = 0; x < self.width; x++){
+					for(var y = (self.height - 1); y >= 0; y--){
+						if(!tileMatrix[x][y]) continue;
+							for(var k = y + 1; k < self.height; k++){
+								if(tileMatrix[x][k] !== tileMatrix[x][y] && tileMatrix[x][k] !== 0) break;
+								if(tileMatrix[x][k] == tileMatrix[x][y]){
+									DATA += 1;
+									tileMatrix[x][k] = tileMatrix[x][k] * 2;
+									tileMatrix[x][y] = 't';
+									score += tileMatrix[x][k];
+									break;
+								};
+							};
+							for(var i = (self.height - 1); i > y; i--){
+								if(tileMatrix[x][i] == 0 || tileMatrix[x][i] == 't'){
+									DATA += 1;
+									tileMatrix[x][i] = tileMatrix[x][y];
+									tileMatrix[x][y] = 0;
+									break;
+								};
+							};
+					};
+				};
+				if(DATA) updateTile();
+			};
+		/*-----*/
+
+		/*Движение вверх*/
+			self.moveUp = function(){
+				var DATA = 0;
+				for(var x = 0; x < self.width; x++){
+					for(var y = 0; y < self.height; y++){
+						if(!tileMatrix[x][y]) continue;
+							for(var k = y - 1; k >= 0; k--){
+								if(tileMatrix[x][k] !== tileMatrix[x][y] && tileMatrix[x][k] !== 0) break;
+								if(tileMatrix[x][k] == tileMatrix[x][y]){
+									DATA += 1;
+									tileMatrix[x][k] = tileMatrix[x][k] * 2;
+									tileMatrix[x][y] = 't';
+									score += tileMatrix[x][k];
+									break;
+								};
+							};
+							for(var i = 0; i < y; i++){
+								if(tileMatrix[x][i] == 0 || tileMatrix[x][i] == 't'){
+									DATA += 1;
+									tileMatrix[x][i] = tileMatrix[x][y];
+									tileMatrix[x][y] = 0;
+									break;
+								};
+							};
+					};
+				};
+				if(DATA) updateTile();
+			};
+		/*-----*/
+	/*------------------------------END ФУНКЦИИ ДЖИЖЕНИЯ------------------------------*/
+
+		};
+			var game = new Game2048();
+			game.height = 4;
+			game.width = 4;
+			game.maxCount = 1;
+			game.creategame();
+			game.generateCss();
+
+			$(document).keydown(function(e){
+                switch (e.keyCode) {
+                    case 37:
+                        game.moveLeft();
+                        break;
+                    case 38:
+                        game.moveUp();
+                        break;
+                    case 39:
+                        game.moveRight();
+                        break;
+                    case 40:
+                        game.moveDown();
+                        break;
+                };
+            });
+	</script>
+</body>
+</html>
